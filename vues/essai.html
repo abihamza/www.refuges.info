@@ -1,0 +1,54 @@
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>SelectFeature Control on multiple vector layers</title> 
+    <link rel="stylesheet" href="../theme/default/style.css" type="text/css">
+    <link rel="stylesheet" href="style.css" type="text/css">
+    <style type="text/css">
+        #controlToggle li {
+            list-style: none;
+        }
+    </style>
+    <script src="../ol.officiel/OpenLayers-2.12/OpenLayers.js"></script>
+    <script type="text/javascript">
+/*        var map;//, selectControl;
+        window.onload = function (){
+            map = new OpenLayers.Map('mlap');
+            var vectors1 = new OpenLayers.Layer.Vector("Vector Layer 1");
+			map.addLayer(vectors1);
+            map.addControl(new OpenLayers.Control.LayerSwitcher());
+}
+*/
+
+var map;
+// Proxy monte par Dominique
+//OpenLayers.ProxyHost = "/ol2.12.1.3/proxy.php?url=";
+
+window.onload = function () {
+
+	//===================  DEBUT initialisation MAP =======================
+
+	map = new OpenLayers.Map('carte_av');
+	var masque = new OpenLayers.Layer.Vector("ee");	
+	map.addLayer(masque);
+	map.addControl(new OpenLayers.Control.LayerSwitcher());
+}
+
+
+    </script>
+  </head>
+  <body ">
+    <h1 id="title">OpenLayers Select Feature on Multiple Layers Example</h1>
+    <div id="tags">
+        vector, feature, selecting, selection, advanced, light
+    </div>     
+    <p id="shortdesc">
+      Select a feature on click with the Control.SelectFeature on multiple 
+      vector layers.
+    </p>  
+    <div id="carte_av" ></div>
+    <div id="status"></div>
+  </body>
+</html>
