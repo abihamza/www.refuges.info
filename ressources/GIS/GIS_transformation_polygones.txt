@@ -1,0 +1,52 @@
+======================================================================
+Ce fichier traite de la conversion des polygones, depuis l'ancien format de WRI, vers la notation PostGIS.
+
+Avant de commencer, il faut connaitre la liste des types de polygones qu'on veut rtansformer:
+massifs=1, zone=11 ...
+
+C'est decoupe en plusieurs etapes pour plus de lisibilite.
+C'est deja assez complexe comme ca.
+======================================================================
+
+-- 1ere etape, cree un champ temporaire de coordonnees dans points_gps :
+ALTER TABLE points_gps ADD COLUMN lonlat text ;
+UPDATE points_gps SET lonlat=CONCAT(longitude,' ',latitude) ;
+
+-- 2e etape, creer un champ temporaire de LINESTRING dans les polygones, car ils ne sont pas tous fermes
+SELECT AddGeometryColumn('polygones', 'linestring', 4326, 'LINESTRING', 2);
+
+-- 3e etape, Remplir ce champ avec les poly de TYPE precis, massifs et autres ...
+-- TODO : Changer la clause HAVING pour les type de polys a gerer !!!!
+UPDATE polygones 
+SET
+	linestring= ST_GeomFromText( concatpoly.polygps , 4326 )
+FROM
+	(SELECT 
+		id_polygone AS polyid,
+		COUNT(*) AS nbarretes,
+		CONCAT('LINESTRING(',
+			STRING_AGG(	points_gps.lonlat, ',' ORDER BY ordre ASC), 
+			')') AS polygps
+	FROM points_gps  NATURAL JOIN lien_polygone_gps
+	GROUP BY id_polygone
+	HAVING id_polygone IN 
+		( SELECT id_polygone FROM polygones WHERE id_polygone_type IN ( 1 ) )
+	) AS concatpoly
+WHERE polygones.id_polygone = concatpoly.polyid
+		
+-- 4e etape, FERMER les linestring qui ne le sont pas:	
+UPDATE polygones
+SET linestring = ST_AddPoint(linestring, ST_StartPoint(linestring))
+WHERE ST_IsClosed(linestring) = false;
+
+-- 5e etape, convertir les linestrings toute belles dans le futur champs (multi)polygon
+-- les multi poly sont une contrainte de plus, faut inserer ST_MULTI().
+-- TODO verifier les noms des champs !
+SELECT AddGeometryColumn('polygones', 'geom', 4326, 'MULTIPOLYGON', 2);
+UPDATE polygones
+SET geom = ST_Multi(ST_MakePolygon(linestring)) ;
+
+-- 6e etape , faire le menage
+-- la colonne linestring de polygones, la colonne lonlat de points_gps
+-- si on est en postGIS 1.5, ne pas oublier la table systeme geometry_columns
+

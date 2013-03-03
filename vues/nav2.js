@@ -147,7 +147,6 @@ function maj_carte ( ) {
 		var layer = layers[i];
 
 		var filtre_layer = conditions(layer) ;
-console.log(filtre_layer);
 		//Si le filtre du layer existe, ET le filtre du conteneur aussi, faut faire un AND
 		if( filtre_layer && filtre_conteneur) {
 			var filtre_final = new OpenLayers.Filter.Logical({
@@ -231,7 +230,7 @@ function applique_styles(fichier_lu) {
     var sld = format.read(fichier_lu.responseXML || fichier_lu.responseText);
 	for (var l in sld.namedLayers) { // 2 NamedLayer, "PointsWRI" et "PolysWRI"
 		var styles = sld.namedLayers[l].userStyles, style; 
-		console.log(sld); // styles= [ Default, hover, attribute=toto ] ...
+		//console.log(sld); // styles= [ Default, hover, attribute=toto ] ...
 		for (var i=0,j=styles.length; i<j; ++i) {
 			style = styles[i];  // style = style par defaut, style = hover .....
 			map.getLayersByName(l)[0].styleMap.styles[style.name] = style;
@@ -243,23 +242,15 @@ function applique_styles(fichier_lu) {
 //FIXME, a l'arrach
 function inverse_polygone ( mpoly ) {
 	var terreentiere = new OpenLayers.Geometry.fromWKT('POLYGON((-100 -45, -100 70,100 70, 100 -45, -100 -45))');
-//var terreentiere = new OpenLayers.Geometry.fromWKT('POLYGON((3 40, 3 48,7 48, 7 40, 3 40))');
-//	console.log(poly);
 	var t = new OpenLayers.Geometry.LinearRing(terreentiere.getVertices());
 	var inners = [ t ] ;
 	for (var c in mpoly.geometry.components) {
 		inners.push( new OpenLayers.Geometry.LinearRing(mpoly.geometry.components[c].getVertices()) );
-		//console.log(mpoly.geometry.components[c].getVertices);
 	} 
-	//console.log(inners);
-
-	
 	var polymasque = new OpenLayers.Geometry.Polygon(inners);
 	var mpoly = new OpenLayers.Geometry.MultiPolygon(polymasque);
-	//console.log(polymasque);
 	var feat = new OpenLayers.Feature.Vector( mpoly );
-//	console.log(feat);
-	
+
 	return feat;
 }
 
@@ -288,7 +279,7 @@ function active_couche_cliquable() {
 						// ICI appel de la fonction qui reagit au click
 						clickout: false,   // on garde les points deja cliques
 						onSelect: function(feature){
-										console.log(feature);
+										//console.log(feature);
 										if( feature.attributes.id_point ) {
 											 //window.open(,"POI"); //FIXME 
 											 alert("lien vers /point/" + feature.attributes.id_point + "/" + feature.attributes.nom);

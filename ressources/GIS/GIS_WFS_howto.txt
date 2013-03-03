@@ -1,0 +1,98 @@
+ =============================================
+ Quelques trucs basiques pour avoir un WFS comme on a besoin
+  -- yip
+
+Le WFS de base que j'ai pris la liberte de mettre en place ne fait pas grand chose, vu de loin...
+repertoire tinyows/
+fichiers importants: tinyows.fcgi, config.xml, .htaccess
+
+---------------------------------
+C'est la logique qui change. 
+Actuellement, ca se passe comme ca:
+		Client OL -> PHP (traduit la demande) -> SQL -> PHP (prepare le resultat) -> Client OL
+Qui fait: 		 WRI						WRI		 WRI						 WRI
+
+avec WFS, c'est comme ca:
+		Client OL -> WFS (traduit la demande) -> SQL -> WFS (package le resultat) -> Client OL
+Qui fait:		WRI							tinyows WFS server					  WRI
+On a a gerer QUE le client OL, comment WFS se debrouille et dialogue avec le SQL, on s'en fout.
+Avec la difference que le dialogue OpenLayer<->WFS est nettement plus standardise que le OpenLayers<->phpWRI
+--------------------------------
+
+Voila ce que fait WFS:
+- Il va chercher dans geomtry_columns la liste des colonnes GIS
+- IL prends une table donnee dans le fichier de conf ("layer-> name et table") config.xml ou tinyows.xml
+- En sort LA colonne GIS (Il faut qu'il y en ait qu'une)
+- Et sert toute la table, y compris les autres colonnes, en WFS (la valeur ajoutee est la).
+
+1er point, C'est pas ce qu'on veut.
+avec ce fonctionnement, il sert:
+la table points_gps , avec 3 fois rien d'infos dedans. or on veut un mix entre les 3 tables point_type, point et points_gps.
+
+La , c'est les VIEW qui rentrent en scene (SQL-ANSI).
+Une VIEW c'est comme une TABLE, mais dynamique.
+
+CREATE OR REPLACE VIEW wfs_points AS
+	SELECT id_point,
+		id_point_type,
+		nom,
+		altitude,
+		article_demonstratif,
+		article_defini,
+		nom_type,
+		nom_icone,
+		importance,
+		geom
+	FROM points NATURAL JOIN points_GPS NATURAL JOIN point_type
+	-- surtout, pas plus de conditions, elles sont gerees automatiquement
+	WHERE pas_afficher=0
+		AND modele=0
+		AND geom IS NOT NULL
+	ORDER BY importance
+
+Voila, on se cree une VIEW avec toutes les infos qu'on veut. sans oublier la geometrie bien sur.
+Une fois qu'elle est cree, on a plus a y toucher. c'est persistant. elle se manipule comme une table.
+en PostGIS 1.5, c'est relou, mais il faut en plus declarer la view dans la table des geometry_column.
+Si on passe en PostGis 2.0, on pourra oublier ca.
+
+-- UNIQUEMENT en POSTGIS 1.5
+INSERT INTO geometry_columns
+SET f_table_schema = 'public',
+	f_table_name = 'wfs_points', 
+	f_geometry_column = 'geom',
+	coord_dimension = 2,
+	srid = 4326,
+	type = 'POINT' ;
+-- UNIQUEMENT en POSTGIS 1.5
+
+Et voila ! la partie WFS C'est fini .
+Le reste ce n'est que du OpenLayers. 
+
+===================================================================
+Idem pour les polygones:
+
+CREATE OR REPLACE VIEW wfs_polys AS
+	SELECT id_polygone,
+		id_polygone_type,
+		nom_polygone,
+		article_partitif,
+		art_dem_poly,
+		art_def_poly,
+		type_polygone,
+		ordre_taille AS importance,
+		to_char(random()*1000000, 'FM#000000') AS couleur,
+		geom
+	FROM polygones NATURAL JOIN polygone_type
+	WHERE geom IS NOT NULL
+	ORDER BY importance
+
+-- La meme embrouille PostGIS 1.5
+-- UNIQUEMENT en POSTGIS 1.5
+INSERT INTO geometry_columns
+SET f_table_schema = 'public',
+	f_table_name = 'wfs_polys', 
+	f_geometry_column = 'geom',
+	coord_dimension = 2,
+	srid = 4326,
+	type = 'MULTIPOLYGON' ;
+-- UNIQUEMENT en POSTGIS 1.5
